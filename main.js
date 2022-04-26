@@ -1,6 +1,12 @@
 const D_WIDTH = 900;
 const D_HEIGHT = 600;
 let player; // プレイヤーのスプライトを格納する変数
+let platforms;
+let time = 0;
+let score = 0;
+let gameOver = false;
+let scoreText;
+let coinCount = 0;
 
 const config = {
     type: Phaser.AUTO,
@@ -30,21 +36,39 @@ let phaser = new Phaser.Game(config);
 
 function preload() {
     console.log("preload!!");
-    this.load.spritesheet("mario2", './assets/mario/mariri.png',{frameWidth: 100, frameHeight: 95});
     this.load.spritesheet("mario", './assets/mario_all.png',{frameWidth: 78.5, frameHeight: 75});
+    this.load.spritesheet("kuribo","./assets/kuribo.png", {frameWidth:84, frameHeight: 70 });
+    this.load.spritesheet("noko", "./assets/nokonoko_aruku.png", {frameWidth:78, frameHeight:100 });
+    this.load.spritesheet("noko_die", "./assets/nokonoko_die.png", {frameWidth:78, frameHeight:75});
     this.load.image("kumo", "./assets/kumo.png");
     this.load.image("sky", "./assets/ssss.png");
+    this.load.image("sky_han", "./assets/sky_han.png");
     this.load.image("block", "./assets/block3.png");
-    this.load.image("r_jump", "./assets/mario_jump_right.png");
-    this.load.image("l_jump", "./assets/mario_left_jump.png");
+    this.load.image("dokan", "./assets/dokan.png");
+    this.load.spritesheet("kuribo_die", "./assets/kuribo_die.png", {frameWidth: 69, frameHeight: 36});
+    this.load.spritesheet("kill", "./assets/killer.png", {frameWidth: 107, frameHeight: 68});
+    this.load.image("coin", "./assets/coin.png");
 }
 
 function create(){
-    console.log("create!!")
-    this.add.image(D_WIDTH/2, D_HEIGHT/2, "sky");
+    console.log("create!!");
 
-    let staticGroup = this.physics.add.staticGroup();
-    staticGroup.create(D_WIDTH/2, D_HEIGHT -40, "block");
+    this.cameras.main.setBounds(0, 0, 2400, 600);
+    this.physics.world.setBounds(0, 0, 2400, 600);
+
+    this.add.image(450, D_HEIGHT/2, "sky");
+    this.add.image(1350, D_HEIGHT/2, "sky_han");
+    this.add.image(2250, D_HEIGHT/2, "sky");
+
+
+    platforms = this.physics.add.staticGroup();
+
+    platforms.create(450, 570, 'block');
+    platforms.create(1200, 570, 'block');
+    platforms.create(2250, 570, 'block');
+    platforms.create(2700, 570, 'block');
+    platforms.create(1000, 480, 'dokan');
+    platforms.create(2000, 480, 'dokan');
 
     this.add.sprite(50, 30, "kumo");
     this.add.sprite(200, 60, "kumo");
@@ -52,11 +76,61 @@ function create(){
     this.add.sprite(500, 20, "kumo");
     this.add.sprite(650, 30, "kumo");
     this.add.sprite(800, 50, "kumo");
+    this.add.sprite(1000, 30, "kumo");
+    this.add.sprite(1300, 60, "kumo");
+    this.add.sprite(1700, 40, "kumo");
+    this.add.sprite(2000, 20, "kumo");
+    this.add.sprite(2400, 30, "kumo");
+    this.add.sprite(2600, 50, "kumo");
 
+
+    let moveGroup;
+    let coinGroup = this.physics.add.group();
+    for (let i = 0; i < 12; i++) {
+        coinGroup.create(i * 200 + 20, 0, "coin");
+    }
 
     player = this.physics.add.sprite(50, D_HEIGHT - 200, 'mario');
+    kuribo = [this.physics.add.sprite(190, 0,'kuribo'),
+        this.physics.add.sprite(300, 0,'kuribo'),
+        this.physics.add.sprite(700, 0,'kuribo'),
+        this.physics.add.sprite(900, 0,'kuribo'),
+        this.physics.add.sprite(1300, 0,'kuribo'),
+        this.physics.add.sprite(2000, 0,'kuribo')]
+
+
+    killer = new Array (
+        [this.physics.add.sprite(2000, 50, 'kill'), -200, -3]
+    )
+    noko = this.physics.add.sprite(400, 150, 'noko');
+
+
+    player.setCollideWorldBounds(true);
+
+    moveGroup = [player, noko];
+
+    kill = [];
+    this.physics.add.collider(coinGroup, platforms)
+    this.physics.add.collider(player, kuribo);
+    this.physics.add.collider(player, kill);
+    this.physics.add.collider(platforms, kuribo);
+    this.physics.add.collider(player, noko);
+    this.physics.add.collider(player, platforms);
+    this.physics.add.collider(moveGroup, platforms);
+
+    this.physics.add.overlap(player, coinGroup, (p, c)=> {
+
+        collectCoin(p, c);
+        c.destroy();//コインを消す
+    }, null, this);
+
     player.lr = true
-    this.physics.add.collider(player, staticGroup);
+    this.cameras.main.startFollow(player, true);
+
+    for (let i of kuribo) {
+        i.setVelocityX(20);
+    }
+
     this.anims.create({
         key: 'left',
         frames: this.anims.generateFrameNumbers('mario', { start: 0, end: 2 }),
@@ -97,6 +171,49 @@ function create(){
         frameRate: 10,
         repeat: -1
     });
+
+    this.anims.create({
+        key: 'kuribo',
+        frames: this.anims.generateFrameNumbers('kuribo', { start: 0, end: 1 }),
+        frameRate: 3,
+        repeat: -1
+    });
+
+    this.anims.create({
+        key: 'kuribo_die',
+        frames: this.anims.generateFrameNumbers('kuribo_die', { start: 0, end: 0 }),
+        frameRate: 3,
+        repeat: -1
+    });
+
+    this.anims.create({
+        key: 'l_noko',
+        frames: this.anims.generateFrameNumbers('noko', { start:0 , end: 1 }),
+        frameRate: 3,
+        repeat: -1
+    });
+    this.anims.create({
+        key: 'r_noko',
+        frames: this.anims.generateFrameNumbers('noko', { start: 2, end: 3}),
+        frameRate: 3,
+        repeat: -1
+    });
+
+    this.anims.create({
+        key: 'r_noko_die',
+        frames: [ { key: 'noko_die', frame: 0 } ],
+        frameRate: 20
+    });
+
+    this.anims.create({
+        key: 'killer',
+        frames: this.anims.generateFrameNumbers('kill', { start: 0, end: 16}),
+        frameRate: 10,
+        repeat: -1
+    });
+
+    scoreText = this.add.text(12, 12, 'Score: ' + score,  { font: "30px", fill: "#000" });
+    scoreText.setScrollFactor(0);
 }
 
 function update() {
@@ -109,35 +226,118 @@ function update() {
         player.lr = false
         player.anims.play('left', true)
         if (cursors.up.isDown) {
-            player.setVelocityY(-150);
+            player.setVelocityY(-300);
         }
+    }else if (cursors.down.isDown) {
+        player.setVelocityY(100);
     }
     else if (cursors.right.isDown && player.body.touching.down) {
         player.setVelocityX(150);
         player.lr = true
         player.anims.play('right', true)
         if (cursors.up.isDown) {
-            player.setVelocityY(-150);
+            player.setVelocityY(-300);
         }
     }
     else if(!player.body.touching.down) {
         if (player.lr) {
             player.anims.play('r_jump')
+            if (cursors.right.isDown || cursors.right.isDown && cursors.up.isDown) {
+                player.setVelocityX(100);
+            }else if (cursors.left.isDown || cursors.right.isDown && cursors.up.isDown){
+                player.setVelocityX(-100);
+            }
         }else {
             player.anims.play('l_jump')
+            if (cursors.right.isDown || cursors.right.isDown && cursors.up.isDown) {
+                player.setVelocityX(100);
+            }else if (cursors.left.isDown || cursors.right.isDown && cursors.up.isDown){
+                player.setVelocityX(-100);
+            }
         }
     }else if (cursors.up.isDown) {
-        player.setVelocityY(-150);
+        player.setVelocityY(-300);
     }
     else {
         player.setVelocityX(0);
         if (player.lr) {
-            player.anims.play('normal_right')
+            player.anims.play('normal_right');
         }else {
-            player.anims.play('normal_left')
+            player.anims.play('normal_left');
         }
-
     }
 
 
+    for (let i of kuribo) {
+
+        if (i.body.touching.down) {
+            i.anims.play('kuribo', true)
+            if (i.body.touching.right) {
+                i.setVelocityX(-20);
+            } else if (i.body.touching.left) {
+                i.setVelocityX(20);
+            }
+        }
+        if (i.body.touching.up) {
+            a = 0;
+            player.setVelocityY(-150);
+            i.anims.play('kuribo_die')
+
+        }
+    }
+
+    console.log(time);
+
+    //敵の動き noko
+    if (noko.body.touching.down) {
+        if (noko.body.touching.right) {
+            noko.setVelocityX(-20);
+            noko.anims.play('l_noko');
+        } else if (noko.body.touching.left) {
+            noko.setVelocityX(20)
+            noko.anims.play('r_noko');
+        }
+    }
+    if (noko.body.touching.up) {
+        player.setVelocityY(-150);
+    }
+
+    if (time % 100 === 0 && time !== 0) {
+        let xnum =  (Math.random() * 2400) + 5
+        let ynum = (Math.random() * 400)
+
+        kuribo.push(
+            this.physics.add.sprite(xnum, 0,'kuribo').setVelocityX(20)
+        );
+        killer.push(
+            [this.physics.add.sprite(2400, ynum, 'kill'), -200, -3]
+        )
+    }
+
+    //キラー
+
+
+    for (let i of killer) {
+        kill.push(i[0]);
+        if(i[0].body.touching.up) {
+            player.setVelocityY(-150);
+            i[2] = 500;
+            i[1] = 0;
+        } else  {
+            i[0].setVelocityY(i[2]);
+            i[0].setVelocityX(i[1]);
+        }
+        i[0].anims.play('killer', true);
+
+    }
+time ++
+}
+
+function collectCoin(playre, coin) {
+    coinCount++
+    score += 10;
+    scoreText.text = 'Score: ' + score;
+    if (coinCount >= 12) {
+
+    }
 }
