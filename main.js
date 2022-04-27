@@ -7,6 +7,7 @@ let score = 0;
 let gameOver = false;
 let scoreText;
 let coinCount = 0;
+let coinGroup
 
 const config = {
     type: Phaser.AUTO,
@@ -85,7 +86,7 @@ function create(){
 
 
     let moveGroup;
-    let coinGroup = this.physics.add.group();
+    coinGroup = this.physics.add.group();
     for (let i = 0; i < 12; i++) {
         coinGroup.create(i * 200 + 20, 0, "coin");
     }
@@ -98,16 +99,17 @@ function create(){
         this.physics.add.sprite(1300, 0,'kuribo'),
         this.physics.add.sprite(2000, 0,'kuribo')]
 
+    noko = [this.physics.add.sprite(400, 150, 'noko'),
+        this.physics.add.sprite(1000, 0, 'noko')]
+
+
 
     killer = new Array (
         [this.physics.add.sprite(2000, 50, 'kill'), -200, -3]
     )
-    noko = this.physics.add.sprite(400, 150, 'noko');
 
 
     player.setCollideWorldBounds(true);
-
-    moveGroup = [player, noko];
 
     kill = [];
     this.physics.add.collider(coinGroup, platforms)
@@ -115,11 +117,10 @@ function create(){
     this.physics.add.collider(player, kill);
     this.physics.add.collider(platforms, kuribo);
     this.physics.add.collider(player, noko);
+    this.physics.add.collider(platforms, noko);
     this.physics.add.collider(player, platforms);
-    this.physics.add.collider(moveGroup, platforms);
 
     this.physics.add.overlap(player, coinGroup, (p, c)=> {
-
         collectCoin(p, c);
         c.destroy();//コインを消す
     }, null, this);
@@ -129,6 +130,10 @@ function create(){
 
     for (let i of kuribo) {
         i.setVelocityX(20);
+    }
+
+    for (let i of noko) {
+        i.setVelocityX(-20);
     }
 
     this.anims.create({
@@ -267,7 +272,7 @@ function update() {
         }
     }
 
-
+//kuribo
     for (let i of kuribo) {
 
         if (i.body.touching.down) {
@@ -289,25 +294,33 @@ function update() {
     console.log(time);
 
     //敵の動き noko
-    if (noko.body.touching.down) {
-        if (noko.body.touching.right) {
-            noko.setVelocityX(-20);
-            noko.anims.play('l_noko');
-        } else if (noko.body.touching.left) {
-            noko.setVelocityX(20)
-            noko.anims.play('r_noko');
+    for (let i of noko) {
+        if (i.body.touching.down) {
+            i.anims.play('l_noko', true);
+            if (i.body.touching.right) {
+                i.setVelocityX(-20);
+                i.anims.play('l_noko', true);
+            } else if (i.body.touching.left) {
+                i.setVelocityX(20)
+                i.anims.play('r_noko', true);
+            }
         }
-    }
-    if (noko.body.touching.up) {
-        player.setVelocityY(-150);
+        if (i.body.touching.up) {
+            player.setVelocityY(-150);
+            i.anims.play('r_noko_die')
+        }
     }
 
     if (time % 100 === 0 && time !== 0) {
         let xnum =  (Math.random() * 2400) + 5
+        let xnum2 = (Math.random() * 2400) + 5
         let ynum = (Math.random() * 400)
 
         kuribo.push(
             this.physics.add.sprite(xnum, 0,'kuribo').setVelocityX(20)
+        );
+        noko.push(
+            this.physics.add.sprite(xnum2, 0,'noko').setVelocityX(20)
         );
         killer.push(
             [this.physics.add.sprite(2400, ynum, 'kill'), -200, -3]
@@ -338,6 +351,9 @@ function collectCoin(playre, coin) {
     score += 10;
     scoreText.text = 'Score: ' + score;
     if (coinCount >= 12) {
-
+        for (let i = 0; i < 12; i++) {
+            coinGroup.create(i * 200 + 20, 0, "coin");
+        }
+        coinCount = 0;
     }
 }
