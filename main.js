@@ -4,8 +4,9 @@ let player; // プレイヤーのスプライトを格納する変数
 let platforms;
 let time = 0;
 let score = 0;
-let gameOver = false;
+let gameOver;
 let scoreText;
+let timeTest;
 let coinCount = 0;
 let coinGroup
 
@@ -120,6 +121,8 @@ function create(){
     this.physics.add.collider(platforms, noko);
     this.physics.add.collider(player, platforms);
 
+
+
     this.physics.add.overlap(player, coinGroup, (p, c)=> {
         collectCoin(p, c);
         c.destroy();//コインを消す
@@ -219,6 +222,12 @@ function create(){
 
     scoreText = this.add.text(12, 12, 'Score: ' + score,  { font: "30px", fill: "#000" });
     scoreText.setScrollFactor(0);
+
+    gameOver = this.add.text(D_WIDTH/2 - 120, D_HEIGHT/2 - 50, "",  { font: "50px", fill: "#000" });
+    gameOver.setScrollFactor(0);
+
+    timeTest = this.add.text(D_WIDTH - 200, 20, 'Time:' + "2000",  { font: "30px", fill: "#000" });
+    timeTest.setScrollFactor(0);
 }
 
 function update() {
@@ -287,7 +296,6 @@ function update() {
             a = 0;
             player.setVelocityY(-150);
             i.anims.play('kuribo_die')
-
         }
     }
 
@@ -311,7 +319,7 @@ function update() {
         }
     }
 
-    if (time % 100 === 0 && time !== 0) {
+    if (time % 200 === 0 && time !== 0) {
         let xnum =  (Math.random() * 2400) + 5
         let xnum2 = (Math.random() * 2400) + 5
         let ynum = (Math.random() * 400)
@@ -325,6 +333,9 @@ function update() {
         killer.push(
             [this.physics.add.sprite(2400, ynum, 'kill'), -200, -3]
         )
+    } else if (time >= 2000) {
+        gameOver.text = "Time up!!";
+        this.physics.pause();
     }
 
     //キラー
@@ -344,6 +355,10 @@ function update() {
 
     }
 time ++
+    times = 2000 - time
+    if (times >= 0) {
+        timeTest.text = 'Time:' + times
+    }
 }
 
 function collectCoin(playre, coin) {
